@@ -58,6 +58,14 @@ try {
 
 const fs = require('fs')
 
+function rolld8s(diceno) {
+    var dicerolls = [];
+    for (var x = 0; x < diceno; x++) {
+        dicerolls.push(randInt(1,8));
+    };
+    return dicerolls
+};
+
 function writeFile(file, obj, options, callback) {
     if (callback == null) {
         callback = options
@@ -192,7 +200,9 @@ let commands = {
             'ATK': parseInt(weaponStats['atk'].split(',')[levels[1] - 1]) + parseInt(classStats['atk'].split(',')[levels[0] - 1]),
             'ME': Math.floor((parseInt(weaponStats['mdef'].split(',')[levels[1] - 1]) + parseInt(classStats['mdef'].split(',')[levels[0] - 1])) / 10),
             'PE': Math.floor((parseInt(weaponStats['pdef'].split(',')[levels[1] - 1]) + parseInt(classStats['pdef'].split(',')[levels[0] - 1])) / 10),
-            'MP': parseInt(weaponStats['mov'].split(',')[levels[1] - 1]) + parseInt(classStats['mov'].split(',')[levels[0] - 1])
+            'MP': parseInt(weaponStats['mov'].split(',')[levels[1] - 1]) + parseInt(classStats['mov'].split(',')[levels[0] - 1]),
+            'accmods': 0,
+            'dicemods': 0
         };
         var oldData = JSON.parse(fs.readFileSync(filename));
         var combinedData = Object.assign({}, data, oldData);
@@ -233,7 +243,7 @@ let commands = {
         //for (var y = 0; y < users.length; y++) {squadJSON[users[y]]['vote'] = '';};
         //writeFile(filename, squadJSON, {spaces: 2}, function(err) {console.error(err)});
         this.say("%close");
-        this.say("democracy is stupid");
+        this.say("democracy is stupid - %vote is disabled");
         //voteloop:
         //for (var q = 0; q < 5; q++) {
         //	console.log(q);
@@ -289,7 +299,8 @@ let commands = {
         var squadFile = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'))
         var wep = squadFile[user.id]['Wep'].slice(0, -1)
         var wepLevel = squadFile[user.id]['Wep'].slice(-1)
-        console.log(moveName == 'occultblast')
+        console.log('below is the important data')
+        console.log(squadFile[user.id]['dicemods'])
         if (users.includes(user.id) && users.includes(whoAt)) {
             if (wep == 'Wand') {
                 console.log('its a wand ig')
@@ -298,13 +309,15 @@ let commands = {
                     var accRoll = randInt(1, 20);
                     var missRate = 3;
                     var hitOrMiss = 'misses!';
-                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1) {
-                        hitOrMiss = 'hits!'
+                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+                        hitOrMiss = 'hits!';
+                        squadFile[user.id]['accmods'] = 0;
                     };
                     this.say('**Accuracy Roll:** ' + accRoll + ' - Magic Shot ' + hitOrMiss)
                     if (hitOrMiss == 'hits!') {
                         var damageRolls = []
-                        damageRolls.push(randInt(1, 8), randInt(1, 8))
+                        damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
                         var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 7 + parseInt(squadFile[user.id]['MAG']);
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
@@ -327,27 +340,62 @@ let commands = {
                     if (pay10 == true) {
                         this.say(user.id + ' paid 10HP in order to increase the range to 5!');
                         this.say('%hp -10, ' + user.id)
+                        this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
                     }
-                    this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
-                    missRate = 2;
                     if (pay5 == true) {
                         this.say(user.id + ' paid 5HP in order to increase the range to 4!');
                         this.say('%hp -5, ' + user.id)
                     }
-                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1) {
+                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
                         hitOrMiss = 'hits!'
+                        squadFile[user.id]['accmods'] = 0;
                     };
                     this.say('**Accuracy Roll:** ' + accRoll + ' - Occult Blast ' + hitOrMiss)
                     if (hitOrMiss == 'hits!') {
-                        var damageRolls = []
-                        damageRolls.push(randInt(1, 8), randInt(1, 8))
+                        var damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
                         var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 9 + parseInt(squadFile[user.id]['MAG']);
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     };
+                    squadFile[user.id]['onCooldown']
+                };
+                console.log(moveName)
+                if (moveName == 'energize') {
+                    this.say('%wt energize')
+                    this.say(user.id + ' sacrifices 12HP and loses -1 Acc on their next attack to gain +2 dice and +1MP for 1 turn!');
+                    this.say('%hp -12 ,' + user.id);
+                    squadFile[user.id]['dicemods'] = 2;
+                    squadFile[user.id]['accmods'] = -1;
+                    var disableArcaneSoul = true;
+                };
+                if (moveName == 'eldritchshot') {
+                    this.say('%wt Eldritch Shot')
+                    var accRoll = randInt(1, 20);
+                    var missRate = 4;
+                    var hitOrMiss = 'misses!';
+                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+                        hitOrMiss = 'hits!';
+                        squadFile[user.id]['accmods'] = 0;
+                    };
+                    this.say('**Accuracy Roll:** ' + accRoll + ' - Eldritch Shot ' + hitOrMiss)
+                    if (hitOrMiss == 'hits!') {
+                        var damageRolls = []
+                        damageRolls = rolld8s(3+squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 12 + parseInt(squadFile[user.id]['MAG']);
+                        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                        this.say('%hp -' + totalDamage + ', ' + whoAt)
+                    } else if (hitOrMiss == 'misses!') {
+                        this.say('Because the attack missed, the user takes 10HP recoil!')
+                        this.say('%hp -10 ,' + user.id)
+                        this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        squadFile[user.id]['accmods'] += 1;
+                    }
                 };
             };
         };
+        writeFile('./squads/squad' + whichSquad + '.json', squadFile, {spaces: 2}, function(err) {console.error(err)});
     },
 
     turnorder: function(target, room, user) {

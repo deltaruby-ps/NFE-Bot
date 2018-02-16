@@ -32,6 +32,11 @@ if (typeof(String.prototype.trim) === "undefined") {
     };
 }
 
+const { resolve } = require('path');
+
+function requireReadFile (path) {
+  return require(resolve(process.cwd(), path));
+}
 function stringify(obj, options) {
     var spaces
     var EOL = '\n'
@@ -186,8 +191,8 @@ let commands = {
         this.say(target);
         var filename = 'squads/squad' + params[0] + '.json';
         var levels = [parseInt(params[2].slice(-1)), parseInt(params[3].slice(-1))]
-        var weaponStats = JSON.parse(fs.readFileSync('./stats/' + params[3].slice(0, -1).toLowerCase() + '.json'));
-        var classStats = JSON.parse(fs.readFileSync('./stats/' + params[2].slice(0, -1).toLowerCase() + '.json'));
+        var weaponStats = requireReadFile('./stats/' + params[3].slice(0, -1).toLowerCase() + '.json');
+        var classStats = requireReadFile('./stats/' + params[2].slice(0, -1).toLowerCase() + '.json');
         var data = {}
         data[params[1]] = {
             'Class': params[2],
@@ -202,9 +207,11 @@ let commands = {
             'PE': Math.floor((parseInt(weaponStats['pdef'].split(',')[levels[1] - 1]) + parseInt(classStats['pdef'].split(',')[levels[0] - 1])) / 10),
             'MP': parseInt(weaponStats['mov'].split(',')[levels[1] - 1]) + parseInt(classStats['mov'].split(',')[levels[0] - 1]),
             'accmods': 0,
-            'dicemods': 0
+            'dicemods': 0,
+            'usedStandard': false,
+            'usedSwift': false
         };
-        var oldData = JSON.parse(fs.readFileSync(filename));
+        var oldData = requireReadFile(filename);
         var combinedData = Object.assign({}, data, oldData);
         writeFile(filename, combinedData, {
             spaces: 2
@@ -223,7 +230,7 @@ let commands = {
     keeproomalive: async function(target, room, user) {
         while (true) {
             this.say('bad users are bad');
-            await sleep(20000000);
+            await sleep(600000);
         };
     },
     host: async function(target, room, user) {
@@ -234,9 +241,10 @@ let commands = {
         this.say("The timer has been set for 120 seconds.");
         await sleep(2000);
         whichSquad = findSquad()
-        var squadJSON = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
+        squadJSON = requireReadFile('./squads/squad' + whichSquad + '.json');
         console.log(squadJSON)
         for (var k in squadJSON) users.push(k);
+        console.log(squadJSON)
         var filename = './squads/squad' + whichSquad + '.json';
         var votedNumber = 0;
         var votes = [];
@@ -268,8 +276,7 @@ let commands = {
                 this.say('%info');
                 this.say('**Go:** ' + activePlayer)
                 this.say('The timer has been set for 150 seconds.')
-                var squadJSON = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
-                squadJSON['hadTurn?'] = false;
+                console.log(squadJSON)
                 writeFile('./squads/squad' + whichSquad + '.json', squadJSON, {
                     spaces: 2
                 }, function(err) {
@@ -278,8 +285,12 @@ let commands = {
                 playerTurnLoop:
                     for (var q = 0; q < 60; q++) {
                         await sleep(2000);
+                        console.log(q);
                         var squadJSON = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
-                        if (squadJSON['hadTurn?'] == true) {
+                        if (squadJSON[activePlayer]['usedStandard'] == true) {
+                            squadJSON[activePlayer]['usedStandard'] == false;
+                            squadJSON[activePlayer]['usedSwift'] == false;
+                            writeFile('./squads/squad' + whichSquad + '.json', squadJSON, {spaces: 2}, function(err) {console.error(err)});
                             break playerTurnLoop
                         };
                     };
@@ -296,15 +307,19 @@ let commands = {
 		if (split.length > 2) {
 			additionalParams = split[2].toLowerCase().trim();
 		}
-        var squadFile = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'))
+        var squadFile = requireReadFile('./squads/squad' + whichSquad + '.json');
+        console.log(squadFile);
         var wep = squadFile[user.id]['Wep'].slice(0, -1)
         var wepLevel = squadFile[user.id]['Wep'].slice(-1)
         console.log('below is the important data')
         console.log(squadFile[user.id]['dicemods'])
         if (users.includes(user.id) && users.includes(whoAt)) {
             if (wep == 'Wand') {
+                if (moveName == 'idle') {
+                    squadFile[user.id]['usedStandard'] = true;
+                };
                 console.log('its a wand ig')
-                if (moveName == 'magicshot') {
+                if (moveName == 'magicshot' && squadFile[user.id]['usedStandard'] == false) {
                     this.say('%wt Magic Shot')
                     var accRoll = randInt(1, 20);
                     var missRate = 3;
@@ -322,9 +337,10 @@ let commands = {
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     };
+                    squadFile[user.id]['usedStandard'] = true;
                 };
                 console.log('it made it this far')
-                if (moveName == 'occultblast') {
+                if (moveName == 'occultblast' && squadFile[user.id]['usedStandard'] == false) {
                     this.say('%wt Occult Blast')
                     var accRoll = randInt(1, 20);
                     var missRate = 3;
@@ -332,11 +348,11 @@ let commands = {
                     var pay10
                     var pay5
                     if (additionalParams == 'pay10') {
-                        var pay10 = false;
+                        var pay10 = true;
                     };
                     if (additionalParams == 'pay5') {
-                        var pay5 = false
-                    }
+                        var pay5 = true;
+                    };
                     if (pay10 == true) {
                         this.say(user.id + ' paid 10HP in order to increase the range to 5!');
                         this.say('%hp -10, ' + user.id)
@@ -358,18 +374,23 @@ let commands = {
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     };
-                    squadFile[user.id]['onCooldown']
+                    squadFile[user.id]['usedStandard'] = true;
                 };
                 console.log(moveName)
                 if (moveName == 'energize') {
-                    this.say('%wt energize')
-                    this.say(user.id + ' sacrifices 12HP and loses -1 Acc on their next attack to gain +2 dice and +1MP for 1 turn!');
-                    this.say('%hp -12 ,' + user.id);
-                    squadFile[user.id]['dicemods'] = 2;
-                    squadFile[user.id]['accmods'] = -1;
-                    var disableArcaneSoul = true;
+                    if (squadFile[user.id]['usedSwift'] == false) {
+                        this.say('%wt energize')
+                        this.say(user.id + ' sacrifices 12HP and loses -1 Acc on their next attack to gain +2 dice and +1MP for 1 turn!');
+                        this.say('%hp -12 ,' + user.id);
+                        squadFile[user.id]['dicemods'] = 2;
+                        squadFile[user.id]['accmods'] = -1;
+                        var disableArcaneSoul = true;
+                        squadFile[user.id]['usedSwift'] = true;
+                    } else {
+                        this.say('You have already used your swift action this turn!')
+                    }
                 };
-                if (moveName == 'eldritchshot') {
+                if (moveName == 'eldritchshot' && squadFile[user.id]['usedStandard'] == false) {
                     this.say('%wt Eldritch Shot')
                     var accRoll = randInt(1, 20);
                     var missRate = 4;
@@ -391,6 +412,7 @@ let commands = {
                         this.say('%hp -10 ,' + user.id)
                         this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
                         squadFile[user.id]['accmods'] += 1;
+                    squadFile[user.id]['usedStandard'] = true;
                     }
                 };
             };

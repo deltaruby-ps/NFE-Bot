@@ -241,7 +241,7 @@ let commands = {
         this.say("The timer has been set for 120 seconds.");
         await sleep(2000);
         whichSquad = findSquad()
-        squadJSON = requireReadFile('./squads/squad' + whichSquad + '.json');
+        squadJSON = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
         console.log(squadJSON)
         for (var k in squadJSON) users.push(k);
         console.log(squadJSON)
@@ -277,19 +277,17 @@ let commands = {
                 this.say('**Go:** ' + activePlayer)
                 this.say('The timer has been set for 150 seconds.')
                 console.log(squadJSON)
-                writeFile('./squads/squad' + whichSquad + '.json', squadJSON, {
-                    spaces: 2
-                }, function(err) {
-                    console.error(err)
-                });
                 playerTurnLoop:
                     for (var q = 0; q < 60; q++) {
                         await sleep(2000);
                         console.log(q);
-                        var squadJSON = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
+                        var squadJSON = fs.readFileSync('./squads/squad' + whichSquad + '.json','utf8');
+                        console.log('bad users')
+                        console.log(activePlayer);                        
+                        console.log(squadJSON[activePlayer])
                         if (squadJSON[activePlayer]['usedStandard'] == true) {
-                            squadJSON[activePlayer]['usedStandard'] == false;
-                            squadJSON[activePlayer]['usedSwift'] == false;
+                            squadJSON[activePlayer]['usedStandard'] = false;
+                            squadJSON[activePlayer]['usedSwift'] = false;
                             writeFile('./squads/squad' + whichSquad + '.json', squadJSON, {spaces: 2}, function(err) {console.error(err)});
                             break playerTurnLoop
                         };
@@ -307,7 +305,7 @@ let commands = {
 		if (split.length > 2) {
 			additionalParams = split[2].toLowerCase().trim();
 		}
-        var squadFile = requireReadFile('./squads/squad' + whichSquad + '.json');
+        var squadFile = JSON.parse(fs.readFileSync('./squads/squad' + whichSquad + '.json'));
         console.log(squadFile);
         var wep = squadFile[user.id]['Wep'].slice(0, -1)
         var wepLevel = squadFile[user.id]['Wep'].slice(-1)

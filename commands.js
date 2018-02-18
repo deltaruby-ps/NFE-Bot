@@ -414,7 +414,7 @@ let commands = {
                     }
                 };
 	    if (wep == 'Spellbook')
-	        console.log('its a wand ig')
+	        console.log('its a cultist!')
 		if (moveName == 'idle') {
                     squadFile[user.id]['usedStandard'] = true;
 		    this.say('Turn ended!')
@@ -422,7 +422,7 @@ let commands = {
 	    	if (moveName == 'fireball' && squadFile[user.id]['usedStandard'] == false) {
 		    this.say('%wt fireball')
 		    var accRoll = randInt(1, 20)
-		    var missRate = 4;
+		    var missRate = 2;
                     var hitOrMiss = 'misses!';
                     if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
                         hitOrMiss = 'hits!';

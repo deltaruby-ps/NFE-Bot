@@ -433,7 +433,7 @@ let commands = {
                         var damageRolls = []
                         damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
                         squadFile[user.id]['dicemods'] = 0;
-                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 12 + parseInt(squadFile[user.id]['MAG']);
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     } else if (hitOrMiss == 'misses!') {

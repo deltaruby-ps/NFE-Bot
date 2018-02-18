@@ -71,6 +71,14 @@ function rolld8s(diceno) {
     return dicerolls
 };
 
+function rolld10s(diceno) {
+    var dicerolls = [];
+    for (var x = 0; x < diceno; x++) {
+        dicerolls.push(randInt(1,10));
+    };
+    return dicerolls
+};
+
 function writeFile(file, obj, options, callback) {
     if (callback == null) {
         callback = options
@@ -210,6 +218,7 @@ let commands = {
             'dicemods': 0,
             'usedStandard': false,
             'usedSwift': false
+	    'hex': false
         };
         var oldData = requireReadFile(filename);
         var combinedData = Object.assign({}, data, oldData);
@@ -421,7 +430,7 @@ let commands = {
 		};
 	    	if (moveName == 'fireball' && squadFile[user.id]['usedStandard'] == false) {
 		    this.say('%wt fireball')
-		    var accRoll = randInt(1, 20)
+		    var accRoll = randInt(1, 20);
 		    var missRate = 2;
                     var hitOrMiss = 'misses!';
                     if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
@@ -431,14 +440,34 @@ let commands = {
                     this.say('**Accuracy Roll:** ' + accRoll + ' - Fireball ' + hitOrMiss)
                     if (hitOrMiss == 'hits!') {
                         var damageRolls = []
-                        damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
+                        damageRolls = rolld10s(2+squadFile[user.id]['dicemods']);
                         squadFile[user.id]['dicemods'] = 0;
                         var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     } else if (hitOrMiss == 'misses!') {
                     squadFile[user.id]['usedStandard'] = true;
-                    }
+		};	  
+		if (moveName == 'hex' && squadFile[user.id]['usedStandard'] == false) {
+		    this.say('%wt hex')
+		    var accRoll = randInt(1,20)
+		    var missRate = 3;
+		    var hitOrMiss = 'misses!';
+		    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+			    hitOrMiss = 'hits!';
+			    squadFile[user.id]['accmods'] = 0;
+		    this.say('**Accuracy Roll:** ' + accRoll + ' - Hex ' + hitOrMiss)
+                        if (hitOrMiss == 'hits!') {
+                        var damageRolls = []
+                        damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
+                        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                        this.say('%hp -' + totalDamage + ', ' + whoAt)
+			squadFile[whoAt]['hex'] = true // idk man, but the most clunkiest way to do it is to make each move check for whether the hex effect is active - tell me if u find something more clean
+		    } else if (hitOrMiss == 'misses!') {
+                    squadFile[user.id]['usedStandard'] = true; 
+		   };
 		};
             };
         };

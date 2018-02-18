@@ -413,6 +413,33 @@ let commands = {
                     squadFile[user.id]['usedStandard'] = true;
                     }
                 };
+	    if (wep == 'Spellbook')
+	        console.log('its a wand ig')
+		if (moveName == 'idle') {
+                    squadFile[user.id]['usedStandard'] = true;
+		    this.say('Turn ended!')
+		};
+	    	if (moveName == 'fireball' && squadFile[user.id]['usedStandard'] == false) {
+		    this.say('%wt fireball')
+		    var accRoll = randInt(1, 20)
+		    var missRate = 4;
+                    var hitOrMiss = 'misses!';
+                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+                        hitOrMiss = 'hits!';
+                        squadFile[user.id]['accmods'] = 0;
+                    };
+                    this.say('**Accuracy Roll:** ' + accRoll + ' - Fireball ' + hitOrMiss)
+                    if (hitOrMiss == 'hits!') {
+                        var damageRolls = []
+                        damageRolls = rolld8s(2+squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 12 + parseInt(squadFile[user.id]['MAG']);
+                        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                        this.say('%hp -' + totalDamage + ', ' + whoAt)
+                    } else if (hitOrMiss == 'misses!') {
+                    squadFile[user.id]['usedStandard'] = true;
+                    }
+		};
             };
         };
         writeFile('./squads/squad' + whichSquad + '.json', squadFile, {spaces: 2}, function(err) {console.error(err)});

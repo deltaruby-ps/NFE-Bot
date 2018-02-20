@@ -251,16 +251,16 @@ let commands = {
         this.say("democracy is stupid - %vote is disabled");
         //voteloop:
         //for (var q = 0; q < 5; q++) {
-        //	console.log(q);
-        //	await sleep(2000) // Checking every 2 seconds to see if votes have come through
-        //	for (var i = 0; i < users.length; i++) {
-        //		if (!(squadJSON[users[i]]['vote'] == '')) {
-        //			votes.push(squadJSON[users[i]]['vote'])
-        //			votedNumber = votedNumber + 1;};
-        //		if (votedNumber == users.length) {
-        //			break voteloop
-        //		};
-        //	};
+        //  console.log(q);
+        //  await sleep(2000) // Checking every 2 seconds to see if votes have come through
+        //  for (var i = 0; i < users.length; i++) {
+        //      if (!(squadJSON[users[i]]['vote'] == '')) {
+        //          votes.push(squadJSON[users[i]]['vote'])
+        //          votedNumber = votedNumber + 1;};
+        //      if (votedNumber == users.length) {
+        //          break voteloop
+        //      };
+        //  };
         //};
         var hammeredVote = mode(votes);
         this.say('i would setmap but kyubs isnt here and im lazy')
@@ -519,7 +519,104 @@ let commands = {
                     squadFile[user.id]['cooldowns']['cyclone'] = true; // Once
                     console.log(squadFile[user.id]['cooldowns'])
                 };
+
+                // WAND 6 - BLIZZARD
+                if (moveName == 'cyclone' && wepLevel > 5) {
+                    if (squadFile[user.id]['usedStandard'] == true) {
+                        return this.say('You have already used your standard action this turn!')
+                    };
+                    if (squadFile[user.id]['cooldowns'].hasOwnProperty(moveName)) {
+                        if (squadFile[user.id]['cooldowns'][moveName] == true) {
+                            return this.say('This move has no uses remaining!')
+                        }
+                    };
+                    this.say('%wt Blizzard')
+                    var accRoll = randInt(1, 20);
+                    var missRate = 4;
+                    var hitOrMiss = 'misses!';
+                    var targets = [];
+                    var hitMissObject = {};
+                    var accrollstring = '**Accuracy Roll:** ' + accRoll + ' - Cyclone ';
+                    targets.push(whoAt);
+                    if (additionalParams != undefined) {
+                        targets.push(additionalParams)
+                    }
+                    numberOfDice = 3;
+                    var allMiss = true;
+                    if (accRoll == 20) {
+                        numberOfDice = numberOfDice * 2
+                    };
+                    for (var w = 0; w < targets.length; w++) {
+                        var eachUser = targets[w]
+                        if (accRoll == 20) {
+                            hitMissObject[eachUser] = 'crits';
+                            allMiss = false;
+                        } else if (squadFile[eachUser]['ME'] + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+                            hitMissObject[eachUser] = 'hits'
+                            allMiss = false;
+                        } else {
+                            hitMissObject[eachUser] = 'misses'
+                        }
+                    };
+                    for (var b = 0; b < targets.length; b++) {
+                        accrollstring += (hitMissObject[targets[b]] + ' ' + targets[b] + ' and ')
+                    };
+                    this.say(accrollstring.slice(0, -5) + '!');
+                    if (allMiss == false) {
+                        var damageRolls = [];
+                        damageRolls = rolld8s(numberOfDice + squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 10 + parseInt(squadFile[user.id]['MAG']);
+                        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                        this.say('%hp -' + totalDamage + ', ' + targets)
+                    }
+                    squadFile[user.id]['usedStandard'] = true;
+                    squadFile[user.id]['cooldowns']['blizzard'] = true; // Once
+                    console.log(squadFile[user.id]['cooldowns'])
+                };
+
+                // WAND 7 - CATACLYSM
+                if (moveName == 'cataclysm' && wepLevel > 6) {
+                    if (squadFile[user.id]['usedStandard'] == true) {
+                        return this.say('You have already used your standard action this turn!')
+                    };
+                    if (squadFile[user.id]['cooldowns'].hasOwnProperty(moveName)) {
+                        if (squadFile[user.id]['cooldowns'][moveName] == true) {
+                            return this.say('This move has no uses remaining!')
+                        }
+                    };
+                    this.say('%wt Cataclysm')
+                    var accRoll = randInt(1, 20);
+                    var missRate = 4;
+                    var hitOrMiss = 'misses!';
+                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+                        hitOrMiss = 'hits!'
+                        squadFile[user.id]['accmods'] = 0;
+                    };
+                    if (accRoll == 20) {
+                        hitOrMiss = 'crits!'
+                        squadFile[user.id]['dicemods'] = squadFile[user.id]['dicemods'] + 2
+                    }
+                    this.say('**Accuracy Roll:** ' + accRoll + ' - Cataclysm ' + hitOrMiss)
+                    if (hitOrMiss == 'hits!' || hitOrMiss == 'crits!') {
+                        this.say('Because Cataclysm hits, the user takes 15HP in recoil!')
+                        this.say('Arcane Soul triggers! The user gains +1ACC on their next attack!')
+                        var damageRolls = rolld8s(2 + squadFile[user.id]['dicemods']);
+                        squadFile[user.id]['dicemods'] = 0;
+                        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 20 + parseInt(squadFile[user.id]['MAG']);
+                        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                        this.say('%hp -' + totalDamage + ', ' + whoAt)
+                    } else {
+                        this.say('Because Cataclysm misses, the user takes 10HP in recoil!')
+                        this.say('Arcane Soul triggers! The user gains +1ACC on their next attack!')
+                    };
+
+                    squadFile[user.id]['usedStandard'] = true;
+                    squadFile[user.id]['cooldowns']['occultblast'] = 2;
+
+                };
             };
+
             if (wep == 'Spellbook')
                 console.log('its a cultist!')
             if (moveName == 'idle') {
@@ -565,6 +662,7 @@ let commands = {
                             squadFile[whoAt]['hex'] = true // idk man, but the most clunkiest way to do it is to make each move check for whether the hex effect is active - tell me if u find something more clean
                         } else if (hitOrMiss == 'misses!') {
                             squadFile[user.id]['usedStandard'] = true;
+                            // iz a eot
                         };
                     };
                 };

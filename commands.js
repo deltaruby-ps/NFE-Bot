@@ -169,6 +169,60 @@ function findSquad() {
     };
 }
 
+function addExtraInfoToJSON(squadFile) {
+    for (var x; x < users.length; x++) {
+        if (squadFile[x]['Class'] == 'Pyrokinetic') {
+            squadFile[x]['fireStacks'] = 0;
+        } // DO OTHER CLASSES SOMETIME //
+        if (squadFile[x]['Wep'] == 'Wand') {
+            squadFile[x]['disableArcaneSoul'] = false;
+        }
+        return squadFile
+    };
+};
+
+function passiveCheck(attacker, defender, accroll, numberOfDice, squadFile) {
+    var passivesInvoked = []; var damageModifier = 0;
+    var className = squadFile[user.id]['Class'].slice(0, -1) // JS is badly language (can't name var class)
+    var classLevel = squadFile[user.id]['Class'].slice(-1)
+    if (squadFile[attacker][className] == 'Pyrokinetic') {
+        if (accRoll > (15 - squadFile[attacker][fireStacks])) {
+            passivesInvoked.push('Invoke: Fire triggers! The attack gains +1 dice!');
+            numberOfDice +=1;
+        };
+        if ((squadFile[attacker][gainedStackYet] == false) && (classLevel > 3) && (typeOfMove == 'standard' || 'movement')) {
+            squadFile[attacker][fireStacks] += 1;
+            passivesInvoked.push('Potential Energy triggers! ' + attacker + ' gains 1 Fire Stack, and now has ' + parseInt(squadFile[attacker][fireStacks]) + ' stacks!');
+            squadFile[attacker][gainedStackYet] = true
+        };
+    };
+    if (squadFile[attacker][className] == 'Rifter') {
+        if (accRoll > 13) {
+            passivesInvoked.push('Time Matrix triggers! The attack gains +5 damage!');
+            damageModifier += 5;
+        };
+    };
+    if (squadFile[defender][className] == 'Cryokinetic') {
+        if (accRoll > (15 - squadFile[defender][iceStacks])) {
+            passivesInvoked.push('Invoke: Ice triggers! The attack gains +1 dice!');
+            numberOfDice -= 1;
+        };
+        if ((squadFile[defender][stacksGainedThisTurn] > 3) && (defenderClassLevel > 3)) {
+            squadFile[defender][iceStacks] += 1;
+            passivesInvoked.push('Subzero triggers! ' + defender + ' gains 1 Ice Stack, and now has ' + parseInt(squadFile[defender][iceStacks]) + ' stacks!');
+            squadFile[defender][stacksGainedThisTurn] += 1
+        };
+    if (squadFile[defender][className] == 'Guardian') {
+        if (accRoll > 15) {
+            passivesInvoked.push('Strike Guard triggers! The attack loses 5 damage!');
+            damageModifier -= 5;
+        };
+    };
+    };
+    return([passivesInvoked, numberOfDice, accRoll, damageModifier])
+};
+
+
 /**@type {{[k: string]: Command | string}} */
 let commands = {
     // Developer commands
@@ -262,6 +316,7 @@ let commands = {
         //      };
         //  };
         //};
+        squadJSON = addExtraInfoToJSON(squadJSON)
         var hammeredVote = mode(votes);
         this.say('i would setmap but kyubs isnt here and im lazy')
         var isGameRunning = true
@@ -382,7 +437,9 @@ let commands = {
                     if (pay10 == true) {
                         this.say(user.id + ' paid 10HP in order to increase the range to 5!');
                         this.say('%hp -10, ' + user.id)
-                        this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //if (squadFile[user.id][disableArcaneSoul] == false) {
+                        //    this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //};
                     }
                     if (pay5 == true) {
                         this.say(user.id + ' paid 5HP in order to increase the range to 4!');
@@ -417,7 +474,7 @@ let commands = {
                         this.say('%hp -12 ,' + user.id);
                         squadFile[user.id]['dicemods'] = 2;
                         squadFile[user.id]['accmods'] = -1;
-                        var disableArcaneSoul = true;
+                        //squadFile[user.id]['disableArcaneSoul'] = true;
                         squadFile[user.id]['usedSwift'] = true;
                     } else {
                         this.say('You have already used your swift action this turn!')
@@ -437,6 +494,7 @@ let commands = {
                     this.say('%wt Eldritch Shot')
                     var accRoll = randInt(1, 20);
                     var missRate = 4;
+                    var numberOfDice = 3;
                     var hitOrMiss = 'misses!';
                     if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
                         hitOrMiss = 'hits!';
@@ -446,10 +504,12 @@ let commands = {
                         hitOrMiss = 'crits!'
                         squadFile[user.id]['dicemods'] = squadFile[user.id]['dicemods'] + 3
                     }
+                    //adjustedValuesArray = passiveCheck(user.id, whoAt, accroll, numberOfDice, squadFile)
+                    //
                     this.say('**Accuracy Roll:** ' + accRoll + ' - Eldritch Shot ' + hitOrMiss)
                     if (hitOrMiss == 'hits!') {
                         var damageRolls = []
-                        damageRolls = rolld8s(3 + squadFile[user.id]['dicemods']);
+                        damageRolls = rolld8s(numberOfDice + squadFile[user.id]['dicemods']);
                         squadFile[user.id]['dicemods'] = 0;
                         var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 12 + parseInt(squadFile[user.id]['MAG']);
                         this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
@@ -457,7 +517,9 @@ let commands = {
                     } else if (hitOrMiss == 'misses!') {
                         this.say('Because the attack missed, the user takes 10HP recoil!')
                         this.say('%hp -10 ,' + user.id)
-                        this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //if (squadFile[user.id][disableArcaneSoul] == false) {
+                        //    this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //}
                         squadFile[user.id]['accmods'] += 1;
                     }
                     squadFile[user.id]['usedStandard'] = true;
@@ -600,7 +662,9 @@ let commands = {
                     this.say('**Accuracy Roll:** ' + accRoll + ' - Cataclysm ' + hitOrMiss)
                     if (hitOrMiss == 'hits!' || hitOrMiss == 'crits!') {
                         this.say('Because Cataclysm hits, the user takes 15HP in recoil!')
-                        this.say('Arcane Soul triggers! The user gains +1ACC on their next attack!')
+                        //if (squadFile[user.id][disableArcaneSoul] == false) {
+                        //    this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //}
                         var damageRolls = rolld8s(2 + squadFile[user.id]['dicemods']);
                         squadFile[user.id]['dicemods'] = 0;
                         var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 20 + parseInt(squadFile[user.id]['MAG']);
@@ -608,71 +672,67 @@ let commands = {
                         this.say('%hp -' + totalDamage + ', ' + whoAt)
                     } else {
                         this.say('Because Cataclysm misses, the user takes 10HP in recoil!')
-                        this.say('Arcane Soul triggers! The user gains +1ACC on their next attack!')
+                        //if (squadFile[user.id][disableArcaneSoul] == false) {
+                        //    this.say('Arcane Soul triggers! ' + user.id + ' gets +1ACC to next attack!');
+                        //}                    
                     };
-
                     squadFile[user.id]['usedStandard'] = true;
-                    squadFile[user.id]['cooldowns']['occultblast'] = 2;
-
+                    squadFile[user.id]['cooldowns']['cataclysm'] = true; // Once
                 };
             };
 
-            if (wep == 'Spellbook')
-                console.log('its a cultist!')
-            if (moveName == 'idle') {
-                squadFile[user.id]['usedStandard'] = true;
-                this.say('Turn ended!')
-            };
-            if (moveName == 'fireball' && squadFile[user.id]['usedStandard'] == false) {
-                this.say('%wt fireball')
-                var accRoll = randInt(1, 20);
-                var missRate = 2;
-                var hitOrMiss = 'misses!';
-                if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
-                    hitOrMiss = 'hits!';
-                    squadFile[user.id]['accmods'] = 0;
-                };
-                this.say('**Accuracy Roll:** ' + accRoll + ' - Fireball ' + hitOrMiss)
-                if (hitOrMiss == 'hits!') {
-                    var damageRolls = []
-                    damageRolls = rolld10s(2 + squadFile[user.id]['dicemods']);
-                    squadFile[user.id]['dicemods'] = 0;
-                    var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
-                    this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
-                    this.say('%hp -' + totalDamage + ', ' + whoAt)
-                } else if (hitOrMiss == 'misses!') {
-                    squadFile[user.id]['usedStandard'] = true;
-                };
-                if (moveName == 'hex' && squadFile[user.id]['usedStandard'] == false) {
-                    this.say('%wt hex')
-                    var accRoll = randInt(1, 20)
-                    var missRate = 3;
-                    var hitOrMiss = 'misses!';
-                    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
-                        hitOrMiss = 'hits!';
-                        squadFile[user.id]['accmods'] = 0;
-                        this.say('**Accuracy Roll:** ' + accRoll + ' - Hex ' + hitOrMiss)
-                        if (hitOrMiss == 'hits!') {
-                            var damageRolls = []
-                            damageRolls = rolld8s(2 + squadFile[user.id]['dicemods']);
-                            squadFile[user.id]['dicemods'] = 0;
-                            var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
-                            this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
-                            this.say('%hp -' + totalDamage + ', ' + whoAt)
-                            squadFile[whoAt]['hex'] = true // idk man, but the most clunkiest way to do it is to make each move check for whether the hex effect is active - tell me if u find something more clean
-                        } else if (hitOrMiss == 'misses!') {
-                            squadFile[user.id]['usedStandard'] = true;
-                            // iz a eot
-                        };
-                    };
-                };
+            //if (wep == 'Spellbook')
+            //    console.log('its a cultist!')
+            //if (moveName == 'fireball' && squadFile[user.id]['usedStandard'] == false) {
+            //   this.say('%wt fireball')
+            //    var accRoll = randInt(1, 20);
+            //    var missRate = 2;
+            //    var hitOrMiss = 'misses!';
+            //    if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+            //        hitOrMiss = 'hits!';
+            //        squadFile[user.id]['accmods'] = 0;
+            //    };
+            //    this.say('**Accuracy Roll:** ' + accRoll + ' - Fireball ' + hitOrMiss)
+            //    if (hitOrMiss == 'hits!') {
+            //        var damageRolls = []
+            //        damageRolls = rolld10s(2 + squadFile[user.id]['dicemods']);
+            //        squadFile[user.id]['dicemods'] = 0;
+            //        var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
+            //        this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+            //        this.say('%hp -' + totalDamage + ', ' + whoAt)
+            //    } else if (hitOrMiss == 'misses!') {
+            //        squadFile[user.id]['usedStandard'] = true;
+            //    };
+            //    if (moveName == 'hex' && squadFile[user.id]['usedStandard'] == false) {
+            //        this.say('%wt hex')
+            //        var accRoll = randInt(1, 20)
+            //        var missRate = 3;
+            //       var hitOrMiss = 'misses!';
+            //        if (parseInt(squadFile[whoAt]['ME']) + missRate < accRoll - 1 + squadFile[user.id]['accmods']) {
+            //            hitOrMiss = 'hits!';
+            //            squadFile[user.id]['accmods'] = 0;
+            //            this.say('**Accuracy Roll:** ' + accRoll + ' - Hex ' + hitOrMiss)
+             //           if (hitOrMiss == 'hits!') {
+             //               var damageRolls = []
+                 //           damageRolls = rolld8s(2 + squadFile[user.id]['dicemods']);
+              ///              squadFile[user.id]['dicemods'] = 0;
+               //             var totalDamage = damageRolls.reduce((a, b) => a + b, 0) + 5 + parseInt(squadFile[user.id]['MAG']);
+                  //          this.say('**Damage Rolls:** ' + damageRolls + ' **Total Damage:** ' + totalDamage);
+                //            this.say('%hp -' + totalDamage + ', ' + whoAt)
+                 //        squadFile[whoAt]['hex'] = true // idk man, but the most clunkiest way to do it is to make each move check for whether the hex effect is active - tell me if u find something more clean
+                  //     } else if (hitOrMiss == 'misses!') {
+                  //          squadFile[user.id]['usedStandard'] = true;
+                  //          // iz a eot
+                //        };
+               //     };
+              //  };
                 writeFile('./squads/squad' + whichSquad + '.json', squadFile, {
                     spaces: 2
                 }, function(err) {
                     console.error(err)
                 });
             };
-        };
+            //};
     },
 
     turnorder: function(target, room, user) {

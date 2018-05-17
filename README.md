@@ -1,4 +1,4 @@
-# Battle Dome Host Bot - Work in Progress
+# NFE Bot - Work in Progress
 Feel free to make any pull requests.
 
 #### Credits

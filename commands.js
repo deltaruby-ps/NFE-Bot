@@ -279,6 +279,14 @@ let commands = {
             console.error(err)
         });
     },
+	nfetour: function(target, room, user) {
+		this.say(//tour create PU, elimination);
+		this.say(//tour name NFE);
+		this.say(//tour rules -PU, +AuroraVeil, +Ferroseed, +Haunter, +Gurdurr, +Clefairy, -Type-Null);
+	};
+	setbanlist: function(target, room, user) {
+		
+	};
     keeproomalive: async function(target, room, user) {
         while (true) {
             this.say('bad users are bad');
